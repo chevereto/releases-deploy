@@ -1,6 +1,8 @@
 # !/usr/bin/env sh
 
 set -e
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+cd $PROJECT_DIR
 
 if [ -f "./config.sh" ]; then
     . ./config.sh
@@ -10,7 +12,7 @@ else
     echo 'Using config.sh.dist'
 fi
 
-if [ "$1" = 'prod' ] && [ "$2" != 'true' ]; then
+if [ "$1" = 'prod' ] && [ "$2" != 'repo' ]; then
     echo -n "Are you sure to going production without sourcing docs repo? It will source from ./docs (y/n)? "
     read answer
     if [ "$answer" != "${answer#[Nn]}" ]; then
@@ -19,12 +21,13 @@ if [ "$1" = 'prod' ] && [ "$2" != 'true' ]; then
     fi
 fi
 
-if [ "$2" = 'true' ]; then
+if [ "$2" = 'repo' ]; then
     if [ -d "docs" ]; then
         cd docs
         if [ "$(git config --get remote.origin.url)" != "$GIT_DOCS" ]; then
             echo "Docs repo changed!"
-            rm -rf -- "$(pwd -P)" && cd ..
+            rm -rf -- "$(pwd -P)"
+            cd ..
             git clone $GIT_DOCS docs
         else
             git fetch --all
@@ -38,7 +41,8 @@ else
     echo 'Skipping docs sourcing...'
 fi
 
-if [ $# -eq 3 ]; then
+if [ "$2" = 'dir' ] && [ $# -eq 3 ]; then
+    echo "Sourcing docs from directory $3"
     rm -rf docs/
     cp -a $3 docs/
 fi
