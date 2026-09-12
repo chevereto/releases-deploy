@@ -83,6 +83,11 @@ jobs:
       - name: Build with PHP
         run: php build.php
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
         run: echo "::set-output name=dir::$(yarn cache dir)"
@@ -98,12 +103,17 @@ jobs:
       - name: Show dir contents
         run: ls -la docs/.vuepress
 
-      - name: vuepress-deploy
-        uses: jenkey2011/vuepress-deploy@master
-        env:
-          ACCESS_TOKEN: ${{ secrets.REPO_HOSTING_ACCESS_TOKEN }}
-          TARGET_REPO: ${{ secrets.REPO_HOSTING }}
-          TARGET_BRANCH: main
-          BUILD_SCRIPT: yarn && yarn build
-          BUILD_DIR: docs/.vuepress/dist/
-          CNAME: ${{ secrets.CNAME }}
+      - name: Install VuePress dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build VuePress
+        run: yarn build
+
+      - name: Deploy documentation
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ secrets.REPO_HOSTING_ACCESS_TOKEN }}
+          external_repository: ${{ secrets.REPO_HOSTING }}
+          publish_branch: main
+          publish_dir: docs/.vuepress/dist
+          cname: ${{ secrets.CNAME }}
