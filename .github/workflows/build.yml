@@ -22,10 +22,10 @@ jobs:
     name: PHP ${{ matrix.php-versions }} test on ${{ matrix.operating-system }}
     steps:
       - name: Checkout
-        uses: actions/checkout@master
+        uses: actions/checkout@v7
 
       - name: Checkout docs
-        uses: actions/checkout@v2
+        uses: actions/checkout@v7
         with:
           repository: ${{ secrets.REPO_DOCS }}
           token: ${{ secrets.REPO_DOCS_ACCESS_TOKEN }}
@@ -40,7 +40,7 @@ jobs:
           key: ${{ env.key }}
 
       - name: Cache extensions
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ steps.extcache.outputs.dir }}
           key: ${{ steps.extcache.outputs.key }}
@@ -68,7 +68,7 @@ jobs:
         run: echo "::set-output name=dir::$(composer config cache-files-dir)"
 
       - name: Cache dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
@@ -83,11 +83,16 @@ jobs:
       - name: Build with PHP
         run: php build.php
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
       - name: Get yarn cache directory path
         id: yarn-cache-dir-path
         run: echo "::set-output name=dir::$(yarn cache dir)"
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         id: yarn-cache
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
@@ -98,12 +103,17 @@ jobs:
       - name: Show dir contents
         run: ls -la docs/.vuepress
 
-      - name: vuepress-deploy
-        uses: jenkey2011/vuepress-deploy@master
-        env:
-          ACCESS_TOKEN: ${{ secrets.REPO_HOSTING_ACCESS_TOKEN }}
-          TARGET_REPO: ${{ secrets.REPO_HOSTING }}
-          TARGET_BRANCH: main
-          BUILD_SCRIPT: yarn && yarn build
-          BUILD_DIR: docs/.vuepress/dist/
-          CNAME: ${{ secrets.CNAME }}
+      - name: Install VuePress dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build VuePress
+        run: yarn build
+
+      - name: Deploy documentation
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ secrets.REPO_HOSTING_ACCESS_TOKEN }}
+          external_repository: ${{ secrets.REPO_HOSTING }}
+          publish_branch: main
+          publish_dir: docs/.vuepress/dist
+          cname: ${{ secrets.CNAME }}
